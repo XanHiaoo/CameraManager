@@ -1,25 +1,29 @@
 ﻿#pragma once
 #include "00-Common/xCameraParam.h"
 #include "00-Common/ImageQueue.h"
+#include <memory>
+#include <functional>
+#include <mutex>
+#include <queue>
 //异常不使用返回值 而是用exception代替
 class ICamera
 {
 public:
-	/* virtual void Open() = 0;
-	 virtual void Close() = 0;*/
+	using ImageCallback = std::function<void(std::shared_ptr<xImage>)>;
+	using SubscriberID = size_t;
+
+	//TODO:sdk_ver是否都为int 
 	virtual int GetSDKVersion() = 0;
+	//virtual int EnumDevices(unsigned int nTLayerType, xDeviceInfoList* pstXDevList) = 0;
 	//获取相机索引
 	virtual int GetIndex() = 0;
-	virtual const std::string GetSerialNo() = 0;
-	//打开相机
-	//virtual bool Open() = 0;
-	//是否打开
+	virtual const char* GetSerialNo() = 0;
+	virtual void GetConfig(xCameraConfig& config) = 0;
 	virtual bool IsOpen() = 0;
 
 	virtual void Open() = 0;
 	virtual void Close() = 0;
-	//关闭相机
-	//virtual bool Close() = 0;
+	virtual void ReleaseCamera(xDeviceInfoList& list) = 0;
 
 	// 开启抓图
 	virtual void StartGrabbing() = 0;
@@ -35,25 +39,27 @@ public:
 
 	// 软触发
 	virtual void SoftTrigger() = 0;
-	//设置相机软触发
-	virtual void SoftwareTrigger() = 0;
-	//设置相机硬触发
+	////设置相机软触发
+	//virtual void SoftwareTrigger() = 0;
+	//相机硬触发
 	virtual void HardwareTrigger() = 0;
 	//取像
-	virtual void CaptureImage() = 0;
-	//virtual bool CaptureImage(void* pBuff) = 0;
+	virtual void GetImageBuffer() = 0;
+	//virtual bool GetImageBuffer(void* pBuff) = 0;
 	//重载
-
+	//获取图像数据
+	virtual void GetImageBuffer(xFrameData& frameData) = 0;
+	virtual void GetImageBuffer(xImage& ImgData) = 0;
 	//设定曝光时间,单位毫秒
 	virtual void SetExpTime(double dExpTime) = 0;
 	//获取曝光时间，单位毫秒
 	virtual double GetExpTime() = 0;
+
 	//设定增益
-	virtual void SetGain(int nGain) = 0;
+	virtual void SetGain(double dGain) = 0;
 	//获取增益
 	virtual double GetGain() = 0;
-	//获取图像数据
-	virtual void GetImageBuffer(xFrameData& frameData) = 0;
+
 	//是否软触发
 	virtual bool IsSoftwareTrigger() = 0;
 	//获取Payload Size
@@ -77,17 +83,29 @@ public:
 	virtual int GetWidth() const = 0;
 	virtual int GetHeight() const = 0;
 	virtual int GetNumChannels() const = 0;
-
 	virtual ImageQueue& GetImageQueue() = 0;
 
-protected:
-	int				m_nIndex;
-	std::string		m_serialNo;
-	bool			m_bOpen;
-	int				m_nNumChannels;
-	int				m_nHeight;
-	int				m_nChannels;
-	bool			m_bGrabbing;
+	virtual std::string GetLastErr(int errorCode) = 0;
 
-	ImageQueue m_imageQueue;
+	// **（Pub-Sub）**
+	virtual SubscriberID AddSubscriber(ImageCallback callback) = 0;
+
+	virtual void RemoveSubscriber(SubscriberID id) = 0;
+
+protected:
+	/*int				m_nIndex;
+	const char*     m_serialNo;*/
+
+	std::unordered_map<SubscriberID, std::function<void(std::shared_ptr<xImage>)>> subscribers;
+	std::mutex subscribersMutex;
+	std::queue<SubscriberID> freeIDs; // 存放可复用的ID
+	SubscriberID nextID = 1; // 初始 ID 从 1 开始
+
+	bool			m_bOpen           =  false;
+	int				m_nHeight         = 0;
+	int				m_nChannels       = 0;
+	bool			m_bGrabbing       = false;
+	bool			m_bSDKInitialized = false;
+	xCameraConfig   m_Config;
+	ImageQueue      m_imageQueue;
 };

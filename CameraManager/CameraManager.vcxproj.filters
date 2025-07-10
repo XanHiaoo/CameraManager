@@ -30,6 +30,12 @@
     <ClCompile Include="00-Common\ImageQueue.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="00-Common\Exceptions\CameraHikException.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="03-Services\Equipment\EquipmentManager.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="03-Services\CCameraService.h">
@@ -48,6 +54,12 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="00-Common\xCameraParam.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="00-Common\Exceptions\CameraHikException.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="03-Services\Equipment\EquipmentManager.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

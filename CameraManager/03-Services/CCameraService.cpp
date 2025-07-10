@@ -1,4 +1,5 @@
-﻿#include "CCameraService.h"
+﻿#include "stdafx.h"
+#include "CCameraService.h"
 #include "00-Common/xCameraParam.h"
 #include "02-Addins/Camera/CCameraHik.h"
 
@@ -8,34 +9,78 @@ CCameraService::~CCameraService()
 {
 	StopCapturing();
 	CloseAll();
+	for (auto* cam : m_Cameras)
+	{
+		SAFE_DELETE(cam);
+	}
 }
-
 void CCameraService::Inject(ICamera& cam)
 {
 	std::lock_guard<std::mutex> lock(m_CamMutex);
 	m_Cameras.push_back(&cam);
-	m_CapturingMap[cam.GetSerialNo()] = false;
+	m_CapturingMap[std::string(cam.GetSerialNo())] = false;
 }
 
-void CCameraService::EnumDevicesForBrand(CameraBrand brand)
+void CCameraService::EnumDevicesByBrand(xCameraBrand& brand, std::vector<xCameraConfig> &xCamCfgList)
 {
-	std::vector<ICamera*> devices;
-
+	xDeviceInfoList xdev;
 	switch (brand)
 	{
-	case CameraBrand::Hikvision:
-		devices = CCameraHik::EnumDevices();
+	case xCameraBrand::Hikvision:
+		//devices = CCameraHik::EnumDevices();		
+		CCameraHik::EnumDevices(-1, xdev, xCamCfgList);
 		break;
-	case CameraBrand::Dahua:
+	case xCameraBrand::Dahua:
 		// Dahua的设备枚举逻辑
 		break;
 	default:
 		return;
 	}
-
-	for (auto* device : devices)
+	/*for (size_t i = 0; i < std::min(static_cast<size_t>(xdev.nDeviceNum), xCamCfgList.size()); i++)
 	{
-		Inject(*device);
+		ICamera* d = new CCameraHik(xCamCfgList[i]);
+		Inject(*d);
+	}*/
+}
+
+// TODO: 实现按协议枚举设备
+void CCameraService::EnumDevicesByProtocol(xCameraType& proto)
+{
+	//xDeviceInfoList xdev;
+	//CCameraHik::EnumDevices((int)proto, xdev);
+	//switch (proto)
+	//{
+	//case xCameraType::GigeCamera:
+	//	//devices = CCameraHik::EnumDevices();
+	//	break;
+	//case xCameraType::Usb3Camera:
+	//	// Dahua的设备枚举逻辑
+	//	break;
+	//default:
+	//	break;
+	//}
+}
+
+void CCameraService::AddDevices(std::vector<xCameraConfig>& xCamCfgList) {
+	for (size_t i = 0; i < xCamCfgList.size(); i++)
+	{
+		AddDevice(xCamCfgList[i]);
+	}
+}
+
+void CCameraService::AddDevice(const xCameraConfig& xCamCfg) {
+	switch (xCamCfg.brand)
+	{
+	case xCameraBrand::Hikvision: 
+	{
+		ICamera* d = new CCameraHik(xCamCfg);
+		Inject(*d);
+		break;
+	}	
+	case xCameraBrand::Dahua:
+		break;
+	default:
+		return;
 	}
 }
 
@@ -57,7 +102,7 @@ void CCameraService::OpenAll()
 {
 	for (auto& camera : m_Cameras)
 	{
-		camera->Open();
+		Open(std::string(camera->GetSerialNo()));
 	}
 }
 
@@ -65,7 +110,34 @@ void CCameraService::CloseAll()
 {
 	for (auto& camera : m_Cameras)
 	{
-		camera->Close();
+		Close(std::string(camera->GetSerialNo()));
+	}
+}
+
+void CCameraService::Open(const std::string& serialNo)
+{
+	std::lock_guard<std::mutex> lock(m_CamMutex);
+	for (auto cam : m_Cameras)
+	{
+		if (serialNo == std::string(cam->GetSerialNo()))
+		{
+			cam->Open();
+			return;
+		}
+	}
+}
+
+void CCameraService::Close(const std::string& serialNo)
+{
+	std::lock_guard<std::mutex> lock(m_CamMutex);
+	for (auto cam : m_Cameras)
+	{
+		if (serialNo == std::string(cam->GetSerialNo()))
+		{
+			cam->Close();
+			cam->GetImageQueue().Clear(); 
+			return;
+		}
 	}
 }
 
@@ -83,7 +155,7 @@ void CCameraService::StartGrabbing(const std::string& serialNo)
 	std::lock_guard<std::mutex> lock(m_CamMutex);
 	for (auto cam : m_Cameras)
 	{
-		if (serialNo == cam->GetSerialNo())
+		if (serialNo == std::string(cam->GetSerialNo()))
 		{
 			cam->StartGrabbing();
 			return;
@@ -105,7 +177,7 @@ void CCameraService::StopGrabbing(const std::string& serialNo)
 	std::lock_guard<std::mutex> lock(m_CamMutex);
 	for (auto cam : m_Cameras)
 	{
-		if (serialNo == cam->GetSerialNo())
+		if (serialNo == std::string(cam->GetSerialNo()))
 		{
 			cam->StopGrabbing();
 			return;
@@ -127,7 +199,7 @@ void CCameraService::SetTriggerMode(const std::string& serialNo, unsigned int mo
 	std::lock_guard<std::mutex> lock(m_CamMutex);
 	for (auto& camera : m_Cameras)
 	{
-		if (serialNo == camera->GetSerialNo())
+		if (serialNo == std::string(camera->GetSerialNo()))
 		{
 			camera->SetTriggerMode(mode);
 			return;
@@ -139,7 +211,7 @@ void CCameraService::StartCapturing()
 {
 	for (auto& camera : m_Cameras)
 	{
-		StartCapturing(camera->GetSerialNo());
+		StartCapturing(std::string(camera->GetSerialNo()));
 	}
 }
 
@@ -153,7 +225,7 @@ void CCameraService::StartCapturing(const std::string& serialNo)
 	m_CapturingMap[serialNo] = true;
 	for (auto& camera : m_Cameras)
 	{
-		if (serialNo == camera->GetSerialNo())
+		if (serialNo == std::string(camera->GetSerialNo()))
 		{
 			m_CameraThreads[serialNo] = std::thread(&CCameraService::CaptureImages, this, camera);
 			break;
@@ -165,7 +237,7 @@ void CCameraService::StopCapturing()
 {
 	for (auto& camera : m_Cameras)
 	{
-		StopCapturing(camera->GetSerialNo());
+		StopCapturing(std::string(camera->GetSerialNo()));
 	}
 }
 
@@ -204,7 +276,7 @@ void CCameraService::RegisterCallback()
 {
 	for (auto& camera : m_Cameras)
 	{
-		RegisterCallback(camera->GetSerialNo());
+		RegisterCallback(std::string(camera->GetSerialNo()));
 	}
 }
 
@@ -213,7 +285,7 @@ void CCameraService::RegisterCallback(const std::string& serialNo)
 	std::lock_guard<std::mutex> lock(m_CamMutex);
 	for (auto& camera : m_Cameras)
 	{
-		if (serialNo == camera->GetSerialNo())
+		if (serialNo == std::string(camera->GetSerialNo()))
 		{
 			camera->RegisterCallback();
 			return;
@@ -221,9 +293,52 @@ void CCameraService::RegisterCallback(const std::string& serialNo)
 	}
 }
 
+void CCameraService::UnRegisterCallback()
+{
+	for (auto& camera : m_Cameras)
+	{
+		UnRegisterCallback(std::string(camera->GetSerialNo()));
+	}
+}
+
+void CCameraService::UnRegisterCallback(const std::string& serialNo)
+{
+	std::lock_guard<std::mutex> lock(m_CamMutex);
+	for (auto& camera : m_Cameras)
+	{
+		if (serialNo == std::string(camera->GetSerialNo()))
+		{
+			camera->UnregisterCallback();
+			return;
+		}
+	}
+}
+
+ICamera::SubscriberID CCameraService::AddSubscriber(const std::string& serialNo, ICamera::ImageCallback callback)
+{
+	std::lock_guard<std::mutex> lock(m_CamMutex);
+	for (auto* cam : m_Cameras) {
+		if (std::string(cam->GetSerialNo()) == serialNo) {
+			return cam->AddSubscriber(std::move(callback));
+		}
+	}
+	return -1;
+}
+
+void CCameraService::RemoveSubscriber(const std::string& serialNo, ICamera::SubscriberID id)
+{
+	std::lock_guard<std::mutex> lock(m_CamMutex);
+	for (auto* cam : m_Cameras) {
+		if (std::string(cam->GetSerialNo()) == serialNo) {
+			cam->RemoveSubscriber(id);
+			return;
+		}
+	}
+}
+
 void CCameraService::CaptureImages(ICamera* camera)
 {
-	std::string serialNo = camera->GetSerialNo();
+	std::string serialNo = std::string(camera->GetSerialNo());
 	while (m_CapturingMap[serialNo])
 	{
 		if (!camera->IsOpen())
@@ -241,7 +356,7 @@ ImageQueue& CCameraService::GetImageQueue(const std::string& serialNo)
 {
 	for (auto& camera : m_Cameras)
 	{
-		if (serialNo == camera->GetSerialNo())
+		if(serialNo == std::string(camera->GetSerialNo()))
 		{
 			return camera->GetImageQueue();
 		}

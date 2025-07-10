@@ -11,18 +11,22 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="00-Common\Exceptions\CameraHikException.cpp" />
     <ClCompile Include="00-Common\ImageQueue.cpp" />
     <ClCompile Include="02-Addins\Camera\CCameraHik.cpp" />
     <ClCompile Include="03-Services\CCameraService.cpp" />
+    <ClCompile Include="03-Services\Equipment\EquipmentManager.cpp" />
     <ClCompile Include="stdafx.cpp" />
     <ClCompile Include="test.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="00-Common\Exceptions\CameraHikException.h" />
     <ClInclude Include="00-Common\ImageQueue.h" />
     <ClInclude Include="00-Common\xCameraParam.h" />
     <ClInclude Include="01-Interface\ICamera.h" />
     <ClInclude Include="02-Addins\Camera\CCameraHik.h" />
     <ClInclude Include="03-Services\CCameraService.h" />
+    <ClInclude Include="03-Services\Equipment\EquipmentManager.h" />
     <ClInclude Include="stdafx.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
@@ -70,6 +74,7 @@
       <SDLCheck>false</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>$(MVCAM_COMMON_RUNENV)\Includes;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -86,6 +91,7 @@
       <SDLCheck>false</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>$(MVCAM_COMMON_RUNENV)\Includes;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

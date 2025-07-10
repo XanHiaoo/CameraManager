@@ -10,13 +10,14 @@ int main() {
 	try {
 		CCameraService cameraService;
 
-		cameraService.EnumDevicesForBrand(CameraBrand::Hikvision);
+		//cameraService.EnumDevicesByBrand(CameraBrand::Hikvision);
 
 		cameraService.OpenAll();
 
+		cameraService.StartGrabbing();
 		// 获取指定相机的图像数据
-		/*xFrameData frameData;
-		cameraService.GetImageBuffer(std::string(cameraService.GetAllCameraSerials()[0]), frameData);*/
+		xFrameData frameData;
+		cameraService.GetImageBuffer(std::string(cameraService.GetAllCameraSerials()[0]), frameData);
 
 		// 注册回调（所有相机）
 		cameraService.RegisterCallback();

@@ -1,1 +1,1 @@
-
+#define SAFE_DELETE(a)			{ if(NULL != a) { delete a; a = NULL; } }

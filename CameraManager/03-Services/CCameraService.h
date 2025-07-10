@@ -7,7 +7,10 @@
 #include <unordered_map>
 #include "01-Interface/ICamera.h"
 #include "00-Common/ImageQueue.h"
-
+/// <summary>
+/// 多相机控制
+/// 相机的参数来源  配置，枚举
+/// </summary>
 class CCameraService
 {
 private:
@@ -18,18 +21,24 @@ private:
 	std::mutex m_CamMutex;
 
 	void CaptureImages(ICamera* camera);
-
 public:
 	CCameraService();
 	~CCameraService();
 
 	void Inject(ICamera& cam);
-	void EnumDevicesForBrand(CameraBrand brand);
-	std::vector<std::string> GetAllCameraSerials();
+	void EnumDevicesByBrand(xCameraBrand& brand, std::vector<xCameraConfig>& xCamCfgList);
+	
+	// TODO: 实现按协议枚举设备
+	void EnumDevicesByProtocol(xCameraType& proto);
 
+	void AddDevices(std::vector<xCameraConfig>& xCamCfgList);
+	void AddDevice(const xCameraConfig& xCamCfg);
 
 	void OpenAll();
 	void CloseAll();
+
+	void Open(const std::string& serialNo);
+	void Close(const std::string& serialNo);
 
 	void StartGrabbing();
 	void StartGrabbing(const std::string& serialNo);
@@ -49,6 +58,15 @@ public:
 
 	void RegisterCallback();
 	void RegisterCallback(const std::string& serialNo);
+
+	void UnRegisterCallback();
+
+	void UnRegisterCallback(const std::string& serialNo);
+
+	ICamera::SubscriberID AddSubscriber(const std::string& serialNo, ICamera::ImageCallback callback);
+	void RemoveSubscriber(const std::string& serialNo, ICamera::SubscriberID id);
+
+	std::vector<std::string> GetAllCameraSerials();
 
 	ImageQueue& GetImageQueue(const std::string& serialNo);
 };
