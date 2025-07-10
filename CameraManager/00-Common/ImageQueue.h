@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <queue>
 #include <memory>
@@ -9,14 +9,15 @@
 class ImageQueue
 {
 private:
-	std::queue<std::shared_ptr<xFrameData>> m_imageQueue;
+	std::queue<std::shared_ptr<xImage>> m_imageQueue;
 	std::mutex m_mutex;
 	std::condition_variable m_condVar;
-	size_t m_maxSize = 12; 
+	size_t m_maxSize = 1;
 
 public:
-	void PushImage(std::shared_ptr<xFrameData> frameData);
-	std::shared_ptr<xFrameData> PopImage();
+	void PushImage(std::shared_ptr<xImage> frameData);
+	std::shared_ptr<xImage> PopImage();
 	bool IsEmpty();
 	void SetMaxSize(size_t maxSize);
+	void Clear();
 };
